@@ -40,7 +40,9 @@ export const ProcessingView = ({ fileName, file, onComplete }: ProcessingViewPro
         setStatus("Optimizing quality...");
 
         if (!response.ok) {
-          throw new Error('Failed to process image');
+          const errorData = await response.json();
+          console.error('API error:', errorData);
+          throw new Error(errorData.error || 'Failed to process image');
         }
 
         const data = await response.json();
