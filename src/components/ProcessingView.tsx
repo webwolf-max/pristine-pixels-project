@@ -1,39 +1,66 @@
 import { useEffect, useState } from "react";
 import { Loader2, CheckCircle2, Sparkles } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { toast } from "@/hooks/use-toast";
 
 interface ProcessingViewProps {
   fileName: string;
-  onComplete: () => void;
+  file: File;
+  onComplete: (processedImageUrl: string) => void;
 }
 
-export const ProcessingView = ({ fileName, onComplete }: ProcessingViewProps) => {
+export const ProcessingView = ({ fileName, file, onComplete }: ProcessingViewProps) => {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("Analyzing image...");
 
   useEffect(() => {
-    const stages = [
-      { progress: 20, status: "Detecting watermark regions..." },
-      { progress: 40, status: "Applying AI inpainting..." },
-      { progress: 60, status: "Refining details..." },
-      { progress: 80, status: "Optimizing quality..." },
-      { progress: 100, status: "Complete!" },
-    ];
+    const processImage = async () => {
+      try {
+        setProgress(20);
+        setStatus("Detecting watermark regions...");
+        
+        const reader = new FileReader();
+        const imageData = await new Promise<string>((resolve) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
 
-    let currentStage = 0;
-    const interval = setInterval(() => {
-      if (currentStage < stages.length) {
-        setProgress(stages[currentStage].progress);
-        setStatus(stages[currentStage].status);
-        currentStage++;
-      } else {
-        clearInterval(interval);
-        setTimeout(onComplete, 500);
+        setProgress(40);
+        setStatus("Applying AI inpainting...");
+
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/remove-watermark`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ imageData }),
+        });
+
+        setProgress(80);
+        setStatus("Optimizing quality...");
+
+        if (!response.ok) {
+          throw new Error('Failed to process image');
+        }
+
+        const data = await response.json();
+        
+        setProgress(100);
+        setStatus("Complete!");
+        
+        setTimeout(() => onComplete(data.processedImageUrl), 500);
+      } catch (error) {
+        console.error('Error processing image:', error);
+        toast({
+          title: "Processing Failed",
+          description: "Failed to remove watermark. Please try again.",
+          variant: "destructive",
+        });
       }
-    }, 1000);
+    };
 
-    return () => clearInterval(interval);
-  }, [onComplete]);
+    processImage();
+  }, [file, onComplete]);
 
   return (
     <div className="w-full max-w-2xl mx-auto">

@@ -20,13 +20,9 @@ const Index = () => {
     setViewState("processing");
   };
 
-  const handleProcessingComplete = () => {
-    // In a real app, this would be the actual processed image URL
-    // For now, we'll use the original as a demo
-    if (selectedFile) {
-      setProcessedUrl(URL.createObjectURL(selectedFile));
-      setViewState("results");
-    }
+  const handleProcessingComplete = (processedImageUrl: string) => {
+    setProcessedUrl(processedImageUrl);
+    setViewState("results");
   };
 
   const handleReset = () => {
@@ -57,6 +53,7 @@ const Index = () => {
         <section className="container mx-auto px-4 py-20">
           <ProcessingView
             fileName={selectedFile.name}
+            file={selectedFile}
             onComplete={handleProcessingComplete}
           />
         </section>
